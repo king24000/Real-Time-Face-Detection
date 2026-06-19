@@ -74,14 +74,70 @@ def draw_hud_box(img, x, y, w, h, confidence, index, theme, distance):
 
 def draw_hud_landmarks(img, landmarks, theme):
     """
-    Draws subtle highlights on detected face landmarks using the theme's glow color.
+    Draws custom sci-fi neon glasses on the eyes and subtle trackers 
+    on the nose/mouth landmarks.
     """
+    if len(landmarks) < 6:
+        return
+
+    eye_left = landmarks[0]   # Viewer's left eye (person's right)
+    eye_right = landmarks[1]  # Viewer's right eye (person's left)
+    nose = landmarks[2]       # Nose tip
+    mouth = landmarks[3]      # Mouth center
+    ear_left = landmarks[4]   # Viewer's left ear
+    ear_right = landmarks[5]  # Viewer's right ear
+
+    primary_color = theme["primary"]
+    secondary_color = theme["secondary"]
     glow_color = theme["glow"]
-    for lm in landmarks:
-        cv2.circle(img, lm, 3, glow_color, -1)
-        # Small crosshairs for a sci-fi feel
-        cv2.line(img, (lm[0] - 5, lm[1]), (lm[0] + 5, lm[1]), glow_color, 1)
-        cv2.line(img, (lm[0], lm[1] - 5), (lm[0], lm[1] + 5), glow_color, 1)
+
+    # 1. Calculate dimensions for glasses based on eye distance
+    dx = eye_right[0] - eye_left[0]
+    dy = eye_right[1] - eye_left[1]
+    eye_dist = np.sqrt(dx**2 + dy**2)
+    
+    if eye_dist > 0:
+        # Radius of lenses is proportional to distance between eyes
+        r = int(eye_dist * 0.32)
+        
+        # Draw glasses bridge connecting the eyes
+        cv2.line(img, eye_left, eye_right, primary_color, 2, cv2.LINE_AA)
+        
+        # Draw side temples connecting eyes to ears
+        cv2.line(img, eye_left, ear_left, secondary_color, 1, cv2.LINE_AA)
+        cv2.line(img, eye_right, ear_right, secondary_color, 1, cv2.LINE_AA)
+        
+        # Draw hex lenses around eyes
+        for eye_center in [eye_left, eye_right]:
+            # Outer Hexagon
+            points_outer = []
+            for i in range(6):
+                angle = i * np.pi / 3 + np.pi / 6  # Flat top/bottom rotated
+                x = int(eye_center[0] + r * np.cos(angle))
+                y = int(eye_center[1] + r * np.sin(angle))
+                points_outer.append((x, y))
+            pts_outer = np.array(points_outer, np.int32).reshape((-1, 1, 2))
+            cv2.polylines(img, [pts_outer], isClosed=True, color=primary_color, thickness=2, lineType=cv2.LINE_AA)
+
+            # Inner Hexagon (Neon double-ring effect)
+            points_inner = []
+            r_inner = int(r * 0.75)
+            for i in range(6):
+                angle = i * np.pi / 3 + np.pi / 6
+                x = int(eye_center[0] + r_inner * np.cos(angle))
+                y = int(eye_center[1] + r_inner * np.sin(angle))
+                points_inner.append((x, y))
+            pts_inner = np.array(points_inner, np.int32).reshape((-1, 1, 2))
+            cv2.polylines(img, [pts_inner], isClosed=True, color=glow_color, thickness=1, lineType=cv2.LINE_AA)
+
+            # Draw a tiny center dot in the eye
+            cv2.circle(img, eye_center, 2, glow_color, -1, cv2.LINE_AA)
+
+    # 2. Draw subtle tracker markers for nose & mouth
+    for landmark_point in [nose, mouth]:
+        cv2.circle(img, landmark_point, 2, glow_color, -1, cv2.LINE_AA)
+        cv2.line(img, (landmark_point[0] - 4, landmark_point[1]), (landmark_point[0] + 4, landmark_point[1]), glow_color, 1, cv2.LINE_AA)
+        cv2.line(img, (landmark_point[0], landmark_point[1] - 4), (landmark_point[0], landmark_point[1] + 4), glow_color, 1, cv2.LINE_AA)
 
 
 def draw_hud_interface(img, faces_count, fps, theme, alert_msg=None, show_hud=True, show_boxes=True):
