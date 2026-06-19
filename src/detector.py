@@ -1,22 +1,48 @@
+import os
+import urllib.request
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 from src.config import MIN_DETECTION_CONFIDENCE
 
 class FaceDetector:
     """
-    A class to encapsulate MediaPipe's Face Detection functionality, 
-    offering simple inputs and outputs.
+    A class to encapsulate MediaPipe's modern Face Detection Tasks API,
+    handling model downloading, initialization, and face inference.
     """
     def __init__(self, confidence_threshold=MIN_DETECTION_CONFIDENCE):
-        self.mp_face_detection = mp.solutions.face_detection
-        self._detector = self.mp_face_detection.FaceDetection(
-            min_detection_confidence=confidence_threshold,
-            model_selection=0  # 0 for short-range faces (within 2 meters), 1 for full-range (within 5 meters)
+        self.model_dir = "models"
+        self.model_path = os.path.join(self.model_dir, "blaze_face_short_range.tflite")
+        
+        # Auto-download the model if not present
+        self._ensure_model_exists()
+
+        # Initialize detector options
+        base_options = python.BaseOptions(model_asset_path=self.model_path)
+        options = vision.FaceDetectorOptions(
+            base_options=base_options,
+            min_detection_confidence=confidence_threshold
         )
+        self._detector = vision.FaceDetector.create_from_options(options)
+
+    def _ensure_model_exists(self):
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+
+        if not os.path.exists(self.model_path):
+            print("\n[INFO] Face detection model not found. Downloading model (~2.3MB)...")
+            url = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+            try:
+                urllib.request.urlretrieve(url, self.model_path)
+                print("[INFO] Model downloaded successfully.")
+            except Exception as e:
+                print(f"[ERROR] Failed to download model from {url}: {e}")
+                raise RuntimeError("Could not download Face Detector model. Please verify your internet connection.")
 
     def detect_faces(self, frame):
         """
-        Processes a frame and returns details of all detected faces.
+        Processes a frame and returns details of all detected faces using Tasks API.
         
         Args:
             frame: OpenCV BGR image frame.
@@ -31,21 +57,23 @@ class FaceDetector:
             return []
 
         h, w, _ = frame.shape
-        # MediaPipe expects RGB images, OpenCV captures in BGR
+        # Convert OpenCV BGR image to RGB
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self._detector.process(rgb_frame)
+        # Create MediaPipe Image object
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+        # Run inference
+        detection_result = self._detector.detect(mp_image)
 
         faces = []
-        if results.detections:
-            for detection in results.detections:
-                # Extract relative bounding box
-                bbox_rel = detection.location_data.relative_bounding_box
-                
-                # Convert relative to pixel coordinates
-                x = int(bbox_rel.xmin * w)
-                y = int(bbox_rel.ymin * h)
-                width = int(bbox_rel.width * w)
-                height = int(bbox_rel.height * h)
+        if detection_result.detections:
+            for detection in detection_result.detections:
+                # Extract bounding box (in pixels)
+                bbox = detection.bounding_box
+                x = bbox.origin_x
+                y = bbox.origin_y
+                width = bbox.width
+                height = bbox.height
 
                 # Boundary safety checks
                 x = max(0, x)
@@ -53,12 +81,13 @@ class FaceDetector:
                 width = min(width, w - x)
                 height = min(height, h - y)
 
-                confidence = detection.score[0] if detection.score else 0.0
+                confidence = detection.categories[0].score if detection.categories else 0.0
 
-                # Extract relative keypoints/landmarks
+                # Extract keypoints/landmarks
                 landmarks = []
-                if detection.location_data.relative_keypoints:
-                    for kp in detection.location_data.relative_keypoints:
+                if detection.keypoints:
+                    for kp in detection.keypoints:
+                        # Keypoints are normalized in the Tasks API, so multiply by dimensions
                         kp_x = int(kp.x * w)
                         kp_y = int(kp.y * h)
                         landmarks.append((kp_x, kp_y))
@@ -75,4 +104,5 @@ class FaceDetector:
         """
         Release resources used by the detector.
         """
-        self._detector.close()
+        if hasattr(self, "_detector"):
+            self._detector.close()
