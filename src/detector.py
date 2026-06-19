@@ -13,7 +13,7 @@ class FaceDetector:
     """
     def __init__(self, confidence_threshold=MIN_DETECTION_CONFIDENCE):
         self.model_dir = "models"
-        self.model_path = os.path.join(self.model_dir, "blaze_face_short_range.tflite")
+        self.model_path = os.path.join(self.model_dir, "blaze_face_full_range.tflite")
         
         # Auto-download the model if not present
         self._ensure_model_exists()
@@ -31,8 +31,8 @@ class FaceDetector:
             os.makedirs(self.model_dir)
 
         if not os.path.exists(self.model_path):
-            print("\n[INFO] Face detection model not found. Downloading model (~2.3MB)...")
-            url = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+            print("\n[INFO] Face detection model not found. Downloading full-range model (~2.4MB)...")
+            url = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite"
             try:
                 urllib.request.urlretrieve(url, self.model_path)
                 print("[INFO] Model downloaded successfully.")

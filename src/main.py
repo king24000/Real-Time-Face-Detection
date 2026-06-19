@@ -2,10 +2,10 @@ import cv2
 import sys
 from src.config import (
     CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT, KEY_QUIT, KEY_SCREENSHOT,
-    KEY_TOGGLE_HUD, KEY_TOGGLE_BOX
+    KEY_TOGGLE_HUD, KEY_TOGGLE_BOX, KEY_CYCLE_THEME, THEMES
 )
 from src.detector import FaceDetector
-from src.utils import FPSTracker, AlertSystem, save_screenshot
+from src.utils import FPSTracker, AlertSystem, save_screenshot, calculate_distance
 from src.hud import draw_hud_box, draw_hud_landmarks, draw_hud_interface
 
 def main():
@@ -37,6 +37,7 @@ def main():
     print(f"Press '{KEY_SCREENSHOT.upper()}' to save a screenshot of the raw camera feed.")
     print(f"Press '{KEY_TOGGLE_HUD.upper()}' to show/hide the dashboard HUD panels.")
     print(f"Press '{KEY_TOGGLE_BOX.upper()}' to show/hide the face bounding boxes.")
+    print(f"Press '{KEY_CYCLE_THEME.upper()}' to cycle between cyberpunk, matrix, stealth, and sunset themes.")
     print("--------------------------------------------------")
 
     # Instantiate modules
@@ -47,6 +48,10 @@ def main():
     # App display state flags
     show_hud = True
     show_boxes = True
+    
+    # Active theme initialization
+    theme_idx = 0
+    active_theme = THEMES[theme_idx]
 
     # Windows creation
     window_name = "Real-Time Face Detection (Antigravity HUD)"
@@ -77,11 +82,14 @@ def main():
                     confidence = face["confidence"]
                     landmarks = face["landmarks"]
 
-                    # Draw Custom Corners bounding box
-                    draw_hud_box(frame, x, y, w, h, confidence, i)
+                    # Compute distance to camera
+                    distance_cm = calculate_distance(w)
+
+                    # Draw Custom Corners bounding box with theme and distance
+                    draw_hud_box(frame, x, y, w, h, confidence, i, active_theme, distance_cm)
                     
                     # Draw Facial Landmarks (eyes, nose, mouth tip, ears)
-                    draw_hud_landmarks(frame, landmarks)
+                    draw_hud_landmarks(frame, landmarks, active_theme)
 
             # Update FPS calculation
             fps_val = fps_tracker.update()
@@ -94,6 +102,7 @@ def main():
                 frame, 
                 faces_count=len(faces), 
                 fps=fps_tracker.get_fps(), 
+                theme=active_theme,
                 alert_msg=current_alert, 
                 show_hud=show_hud, 
                 show_boxes=show_boxes
@@ -131,6 +140,13 @@ def main():
                 show_boxes = not show_boxes
                 status_str = "VISIBLE" if show_boxes else "HIDDEN"
                 alert_system.trigger(f"DETECTIONS {status_str}", duration=1.5)
+
+            # Cycle color themes
+            elif key == ord(KEY_CYCLE_THEME.lower()) or key == ord(KEY_CYCLE_THEME.upper()):
+                theme_idx = (theme_idx + 1) % len(THEMES)
+                active_theme = THEMES[theme_idx]
+                alert_system.trigger(f"THEME: {active_theme['name']}", duration=2.0)
+                print(f"[HUD] Theme updated to: {active_theme['name']}")
 
             # Check if OpenCV window was closed via close 'X' button
             if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:

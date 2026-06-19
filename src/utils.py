@@ -81,3 +81,17 @@ def save_screenshot(frame):
         print(f"Error saving screenshot: {e}")
     
     return None
+
+
+def calculate_distance(face_pixel_width):
+    """
+    Estimates the distance of a face from the camera in centimeters
+    using the triangle similarity formula.
+    
+    Formula: Distance = (Known Width * Focal Length) / Pixel Width
+    """
+    from src.config import KNOWN_FACE_WIDTH, FOCAL_LENGTH
+    if face_pixel_width <= 0:
+        return 0.0
+    return (KNOWN_FACE_WIDTH * FOCAL_LENGTH) / face_pixel_width
+
