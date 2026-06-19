@@ -1,0 +1,544 @@
+/* ==========================================================================
+   FUTURISTIC CYBERPUNK GLASSMORPHISM DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+    /* Base Font Family Configuration */
+    --font-title: 'Orbitron', 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+    
+    /* Layout Constants */
+    --hud-bg: rgba(10, 10, 12, 0.65);
+    --border-radius: 12px;
+    --border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Theme color definitions */
+.cyber-theme-cyberpunk {
+    --primary-color: #00ffd5;      /* Cyan */
+    --secondary-color: #ff00c8;    /* Magenta */
+    --glow-color: #4da6ff;         /* Neon Blue */
+    --primary-rgb: 0, 255, 213;
+    --secondary-rgb: 255, 0, 200;
+}
+
+.cyber-theme-matrix {
+    --primary-color: #00ff00;      /* Matrix Green */
+    --secondary-color: #008000;    /* Dark Green */
+    --glow-color: #8cff8c;         /* Light Green */
+    --primary-rgb: 0, 255, 0;
+    --secondary-rgb: 0, 128, 0;
+}
+
+.cyber-theme-stealth {
+    --primary-color: #ff1a1a;      /* Pure Red */
+    --secondary-color: #ff6666;    /* Coral Red */
+    --glow-color: #ff4d4d;         /* Neon Red */
+    --primary-rgb: 255, 26, 26;
+    --secondary-rgb: 255, 102, 102;
+}
+
+.cyber-theme-sunset {
+    --primary-color: #ff9d00;      /* Amber Orange */
+    --secondary-color: #ff4800;    /* Crimson Orange */
+    --glow-color: #ffdf9e;         /* Gold */
+    --primary-rgb: 255, 157, 0;
+    --secondary-rgb: 255, 72, 0;
+}
+
+/* Reset and Core Body configuration */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #030305;
+    color: #e2e8f0;
+    font-family: var(--font-body);
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Futuristic Tech Grid Backdrop */
+.grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Dynamic glow meshes */
+.glow-mesh {
+    position: absolute;
+    top: 15%;
+    left: 10%;
+    width: 450px;
+    height: 450px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--primary-rgb), 0.08) 0%, transparent 70%);
+    filter: blur(80px);
+    z-index: 1;
+    pointer-events: none;
+    animation: pulseGlow 12s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    0% { transform: scale(1); filter: blur(80px); }
+    100% { transform: scale(1.3); filter: blur(100px); opacity: 0.8; }
+}
+
+/* Glassmorphism Frosted Container style */
+.glass-card {
+    background: var(--hud-bg);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    z-index: 2;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(var(--primary-rgb), 0.18);
+    box-shadow: 0 8px 32px 0 rgba(var(--primary-rgb), 0.04);
+}
+
+/* ==========================================================================
+   DASHBOARD GRID LAYOUT
+   ========================================================================== */
+
+.dashboard-wrapper {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 16px;
+    gap: 16px;
+}
+
+/* 1. Header Layout */
+.main-header {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--primary-color);
+    animation: rotateTriangle 3s infinite ease-in-out;
+}
+
+@keyframes rotateTriangle {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+}
+
+.header-title {
+    font-family: var(--font-title);
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #ffffff 30%, var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.version-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--secondary-color);
+    border: 1px solid rgba(var(--secondary-rgb), 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: rgba(var(--secondary-rgb), 0.05);
+}
+
+/* Telemetry Items */
+.telemetry-bar {
+    display: flex;
+    gap: 24px;
+}
+
+.telemetry-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.tel-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #64748b;
+}
+
+.tel-value {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ef4444; /* Default Red */
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.pulse-dot.online {
+    background-color: #22c55e; /* Active Green */
+    box-shadow: 0 0 10px #22c55e;
+    animation: blinkGreen 1.5s infinite;
+}
+
+@keyframes blinkGreen {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* 2. Main Workspace Layout */
+.workspace-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    height: calc(100% - 140px); /* Account for header and footer */
+}
+
+/* Control Deck Panel */
+.control-deck {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+.section-title {
+    font-family: var(--font-title);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--primary-color);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+    padding-bottom: 10px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.control-group h3 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #64748b;
+    letter-spacing: 1px;
+}
+
+/* Switch styling */
+.switch-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 6px 0;
+}
+
+.switch-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #cbd5e1;
+}
+
+.switch-container input {
+    display: none;
+}
+
+.custom-switch {
+    width: 42px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: rgba(255, 255, 255, 0.1);
+    position: relative;
+    transition: background-color 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.custom-switch::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    background-color: #cbd5e1;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+.switch-container input:checked + .custom-switch {
+    background-color: rgba(var(--primary-rgb), 0.2);
+    border-color: var(--primary-color);
+}
+
+.switch-container input:checked + .custom-switch::after {
+    transform: translateX(20px);
+    background-color: var(--primary-color);
+    box-shadow: 0 0 6px var(--primary-color);
+}
+
+/* Theme picker button grids */
+.theme-picker-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.theme-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #94a3b8;
+    font-family: var(--font-title);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: left;
+}
+
+.theme-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.theme-btn.active {
+    background: rgba(var(--primary-rgb), 0.1);
+    color: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.15);
+}
+
+.theme-preview {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.cp-colors { background: linear-gradient(45deg, #00ffd5, #ff00c8); }
+.matrix-colors { background: linear-gradient(45deg, #00ff00, #008000); }
+.stealth-colors { background: linear-gradient(45deg, #ff1a1a, #ff6666); }
+.sunset-colors { background: linear-gradient(45deg, #ff9d00, #ff4800); }
+
+/* Capture Action Button styles */
+.action-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--secondary-color);
+    background: rgba(var(--secondary-rgb), 0.06);
+    color: #ffffff;
+    font-family: var(--font-title);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.action-btn:hover {
+    background: var(--secondary-color);
+    box-shadow: 0 0 15px rgba(var(--secondary-rgb), 0.4);
+    transform: translateY(-2px);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+.btn-subtext {
+    font-size: 10px;
+    color: #64748b;
+    text-align: center;
+}
+
+/* 3. Stream Terminal Panel */
+.stream-terminal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 12px;
+    border: 1px solid rgba(var(--primary-rgb), 0.1);
+}
+
+/* Corner Bracket highlights */
+.terminal-corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-color: var(--primary-color);
+    border-style: solid;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.terminal-corner.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+.terminal-corner.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+.terminal-corner.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+.terminal-corner.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+#output-canvas {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #000;
+}
+
+/* Loader / Prompt overlay when camera loads */
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(5, 5, 8, 0.85);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    transition: opacity 0.5s ease;
+}
+
+.loader-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(var(--primary-rgb), 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spinLoader 1s linear infinite;
+    box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.2);
+}
+
+@keyframes spinLoader {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.camera-overlay p {
+    font-family: var(--font-title);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--primary-color);
+}
+
+.overlay-hint {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* 4. Footer Layout */
+.main-footer {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.footer-left {
+    display: flex;
+    gap: 16px;
+}
+
+.key-shortcut {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #64748b;
+}
+
+.key-shortcut kbd {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #cbd5e1;
+}
+
+/* Alert Notification Panel */
+.alert-display {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 32px;
+    width: 380px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(var(--secondary-rgb), 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    padding: 0 16px;
+}
+
+.alert-pulse-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 3px;
+    background-color: var(--secondary-color);
+    box-shadow: 0 0 8px var(--secondary-color);
+}
+
+.alert-message-text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: #e2e8f0;
+}

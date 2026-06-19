@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Face Detection HUD</title>
+    <!-- Google Fonts for futuristic look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- Local CSS link -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="cyber-theme-cyberpunk">
+    <!-- Animated background grid -->
+    <div class="grid-overlay"></div>
+    <div class="glow-mesh"></div>
+
+    <div class="dashboard-wrapper">
+        <!-- 1. Header Navigation Dashboard -->
+        <header class="main-header glass-card">
+            <div class="header-left">
+                <div class="logo-icon">▲</div>
+                <h1 class="header-title">FACE DETECTION HUD</h1>
+                <span class="version-tag">v2.0.0</span>
+            </div>
+            
+            <div class="telemetry-bar">
+                <div class="telemetry-item">
+                    <span class="tel-label">LATENCY</span>
+                    <span id="tel-latency" class="tel-value">-- ms</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="tel-label">SYSTEM STATE</span>
+                    <span class="tel-value status-indicator">
+                        <span class="pulse-dot" id="connection-dot"></span>
+                        <span id="connection-status">DISCONNECTED</span>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. Main Workspace Layout -->
+        <div class="workspace-grid">
+            <!-- Sidebar Control Deck -->
+            <aside class="control-deck glass-card">
+                <h2 class="section-title">CONTROL PANEL</h2>
+                
+                <div class="control-group">
+                    <h3>VISIBILITY SWITCHES</h3>
+                    <label class="switch-container">
+                        <span class="switch-label">SHOW HEADER HUD</span>
+                        <input type="checkbox" id="toggle-hud" checked>
+                        <span class="custom-switch"></span>
+                    </label>
+
+                    <label class="switch-container">
+                        <span class="switch-label">SHOW BOUNDING BOXES</span>
+                        <input type="checkbox" id="toggle-boxes" checked>
+                        <span class="custom-switch"></span>
+                    </label>
+
+                    <label class="switch-container">
+                        <span class="switch-label">CYBER GLASSES</span>
+                        <input type="checkbox" id="toggle-glasses" checked>
+                        <span class="custom-switch"></span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <h3>SYSTEM THEMES</h3>
+                    <div class="theme-picker-grid">
+                        <button class="theme-btn active" data-theme="cyberpunk" id="btn-theme-cyberpunk">
+                            <span class="theme-preview cp-colors"></span>
+                            CYBERPUNK
+                        </button>
+                        <button class="theme-btn" data-theme="matrix" id="btn-theme-matrix">
+                            <span class="theme-preview matrix-colors"></span>
+                            MATRIX
+                        </button>
+                        <button class="theme-btn" data-theme="stealth" id="btn-theme-stealth">
+                            <span class="theme-preview stealth-colors"></span>
+                            STEALTH
+                        </button>
+                        <button class="theme-btn" data-theme="sunset" id="btn-theme-sunset">
+                            <span class="theme-preview sunset-colors"></span>
+                            SUNSET
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-group action-group">
+                    <h3>CAPTURE CONTROL</h3>
+                    <button class="action-btn" id="btn-snapshot">
+                        📷 TAKE BACKEND SNAPSHOT
+                    </button>
+                    <p class="btn-subtext">Saves clean raw photo on server disk</p>
+                </div>
+            </aside>
+
+            <!-- Video Output Terminal -->
+            <main class="stream-terminal glass-card">
+                <!-- Glowing corner markers for video container -->
+                <div class="terminal-corner tl"></div>
+                <div class="terminal-corner tr"></div>
+                <div class="terminal-corner bl"></div>
+                <div class="terminal-corner br"></div>
+
+                <!-- Hidden video element to read webcam frames -->
+                <video id="webcam-video" autoplay playsinline muted style="display:none;"></video>
+                
+                <!-- Visible Canvas where we draw the frames and overlays -->
+                <canvas id="output-canvas" width="1280" height="720"></canvas>
+
+                <!-- Camera Access Overlay for user prompts -->
+                <div class="camera-overlay" id="camera-prompt">
+                    <div class="loader-spinner"></div>
+                    <p>WAITING FOR WEBCAM STREAM...</p>
+                    <span class="overlay-hint">Please grant camera permissions when prompted by your browser.</span>
+                </div>
+            </main>
+        </div>
+
+        <!-- 3. Bottom HUD Alerts & Guides Bar -->
+        <footer class="main-footer glass-card">
+            <div class="footer-left">
+                <span class="key-shortcut"><kbd>Q</kbd> Exit</span>
+                <span class="key-shortcut"><kbd>S</kbd> Snapshot</span>
+                <span class="key-shortcut"><kbd>H</kbd> Toggle HUD</span>
+                <span class="key-shortcut"><kbd>B</kbd> Toggle Boxes</span>
+                <span class="key-shortcut"><kbd>C</kbd> Switch Theme</span>
+            </div>
+            
+            <div class="alert-display" id="alert-toast-container">
+                <div class="alert-pulse-bar"></div>
+                <span class="alert-message-text" id="alert-text">SYSTEM INITIALIZED: STANDBY</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script loading -->
+    <script src="/static/script.js"></script>
+</body>
+</html>

@@ -1,166 +1,128 @@
+import os
 import cv2
-import sys
-from src.config import (
-    CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT, KEY_QUIT, KEY_SCREENSHOT,
-    KEY_TOGGLE_HUD, KEY_TOGGLE_BOX, KEY_CYCLE_THEME, THEMES
-)
+import base64
+import numpy as np
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
+from src.config import SCREENSHOTS_DIR
 from src.detector import FaceDetector
-from src.utils import FPSTracker, AlertSystem, save_screenshot, calculate_distance
-from src.hud import draw_hud_box, draw_hud_landmarks, draw_hud_interface
+from src.utils import calculate_distance, save_screenshot
 
-def main():
-    print("==================================================")
-    print("     Real-Time Face Detection HUD Launcher        ")
-    print("==================================================")
-    print("Initializing camera feed and detector models...")
+app = FastAPI(title="Real-Time Face Detection Web HUD API")
 
-    # Initialize video capture
-    cap = cv2.VideoCapture(CAMERA_INDEX)
-    
-    # Configure camera resolution
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+# Initialize face detector model
+detector = FaceDetector()
 
-    if not cap.isOpened():
-        print(f"\n[ERROR] Could not access camera with index {CAMERA_INDEX}.")
-        print("Please check the following troubleshooting steps:")
-        print("1. Ensure your webcam is plugged in and turned on.")
-        print("2. Close any other application currently using the camera.")
-        print("3. Check 'src/config.py' and try modifying 'CAMERA_INDEX' if you have multiple cameras.")
-        sys.exit(1)
+# Mount static folder for serving CSS, JS and index.html
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    # Print settings status
-    actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Camera opened successfully. Resolution: {actual_w}x{actual_h}")
-    print(f"Press '{KEY_QUIT.upper()}' to exit the application.")
-    print(f"Press '{KEY_SCREENSHOT.upper()}' to save a screenshot of the raw camera feed.")
-    print(f"Press '{KEY_TOGGLE_HUD.upper()}' to show/hide the dashboard HUD panels.")
-    print(f"Press '{KEY_TOGGLE_BOX.upper()}' to show/hide the face bounding boxes.")
-    print(f"Press '{KEY_CYCLE_THEME.upper()}' to cycle between cyberpunk, matrix, stealth, and sunset themes.")
-    print("--------------------------------------------------")
+@app.get("/")
+async def get_index():
+    """
+    Renders the main dashboard webpage.
+    """
+    return FileResponse("static/index.html")
 
-    # Instantiate modules
-    detector = FaceDetector()
-    fps_tracker = FPSTracker()
-    alert_system = AlertSystem()
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """
+    Handles browser favicon requests with 204 No Content to avoid console 404 warnings.
+    """
+    return Response(status_code=204)
 
-    # App display state flags
-    show_hud = True
-    show_boxes = True
-    
-    # Active theme initialization
-    theme_idx = 0
-    active_theme = THEMES[theme_idx]
+class ScreenshotRequest(BaseModel):
+    image_base64: str
 
-    # Windows creation
-    window_name = "Real-Time Face Detection (Antigravity HUD)"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(window_name, actual_w, actual_h)
+@app.post("/api/screenshot")
+async def save_client_screenshot(req: ScreenshotRequest):
+    """
+    Saves a clean raw camera frame uploaded by the web client to the backend disk.
+    """
+    try:
+        # Extract base64 image data
+        if "," in req.image_base64:
+            header, encoded = req.image_base64.split(",", 1)
+        else:
+            encoded = req.image_base64
+            
+        data = base64.b64decode(encoded)
+        nparr = np.frombuffer(data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return {"success": False, "error": "Invalid image data"}
 
+        saved_path = save_screenshot(frame)
+        if saved_path:
+            filename = os.path.basename(saved_path)
+            print(f"[WEB API] Screenshot saved to: {saved_path}")
+            return {"success": True, "filepath": saved_path, "filename": filename}
+        
+        return {"success": False, "error": "Failed to write image to disk"}
+    except Exception as e:
+        print(f"[WEB API] Error saving screenshot: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket route that receives binary camera frames, performs face detection,
+    calculates physical face distance, and sends coordinates back to the client.
+    """
+    await websocket.accept()
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("[ERROR] Failed to read frame from camera feed.")
-                break
-
-            # Mirror the frame horizontally for a more natural webcam user experience
-            frame = cv2.flip(frame, 1)
-
-            # Make a clean copy of the frame before drawing overlays for clean screenshot capture
-            clean_frame = frame.copy()
-
-            # Perform detection
-            faces = []
-            if show_boxes:
+            # Receive binary frame (JPEG) from browser (will raise disconnect exception if connection closed)
+            data = await websocket.receive_bytes()
+            
+            # Decode JPEG binary payload into OpenCV image
+            nparr = np.frombuffer(data, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if frame is None:
+                await websocket.send_json({"success": False, "error": "Invalid frame data"})
+                continue
+            
+            try:
+                # Run MediaPipe face detector
                 faces = detector.detect_faces(frame)
                 
-                # Draw bounding boxes & landmarks on frame
-                for i, face in enumerate(faces, start=1):
+                # Build payload of coordinates and estimated distances
+                payload = []
+                for face in faces:
                     x, y, w, h = face["bbox"]
                     confidence = face["confidence"]
                     landmarks = face["landmarks"]
-
-                    # Compute distance to camera
+                    
+                    # Calculate estimated distance in cm
                     distance_cm = calculate_distance(w)
-
-                    # Draw Custom Corners bounding box with theme and distance
-                    draw_hud_box(frame, x, y, w, h, confidence, i, active_theme, distance_cm)
                     
-                    # Draw Facial Landmarks (eyes, nose, mouth tip, ears)
-                    draw_hud_landmarks(frame, landmarks, active_theme)
-
-            # Update FPS calculation
-            fps_val = fps_tracker.update()
-
-            # Fetch active screen notification
-            current_alert = alert_system.active_message()
-
-            # Render overall HUD dashboard structure
-            draw_hud_interface(
-                frame, 
-                faces_count=len(faces), 
-                fps=fps_tracker.get_fps(), 
-                theme=active_theme,
-                alert_msg=current_alert, 
-                show_hud=show_hud, 
-                show_boxes=show_boxes
-            )
-
-            # Render window frame
-            cv2.imshow(window_name, frame)
-
-            # Input key event handling (wait 1ms)
-            key = cv2.waitKey(1) & 0xFF
+                    payload.append({
+                        "bbox": [x, y, w, h],
+                        "confidence": float(confidence),
+                        "landmarks": landmarks,
+                        "distance": float(round(distance_cm, 2))
+                    })
+            except Exception as inference_err:
+                print(f"[DETECTION ERROR] Error during MediaPipe inference: {inference_err}")
+                await websocket.send_json({"success": False, "error": str(inference_err)})
+                continue
+                
+            # Send results back as JSON (will raise disconnect exception if connection closed)
+            await websocket.send_json({
+                "success": True,
+                "faces": payload
+            })
             
-            # Quit application
-            if key == ord(KEY_QUIT.lower()) or key == ord(KEY_QUIT.upper()):
-                print("\nShutdown request received. Closing...")
-                break
-                
-            # Screenshot / Snapshot save
-            elif key == ord(KEY_SCREENSHOT.lower()) or key == ord(KEY_SCREENSHOT.upper()):
-                saved_path = save_screenshot(clean_frame)
-                if saved_path:
-                    filename = saved_path.split("\\")[-1]
-                    print(f"[HUD] Screenshot saved to: {saved_path}")
-                    alert_system.trigger(f"SNAPSHOT SAVED: {filename}")
-                else:
-                    alert_system.trigger("SCREENSHOT ERROR!")
-                    
-            # Toggle Dashboard HUD Panels
-            elif key == ord(KEY_TOGGLE_HUD.lower()) or key == ord(KEY_TOGGLE_HUD.upper()):
-                show_hud = not show_hud
-                status_str = "ENABLED" if show_hud else "DISABLED"
-                alert_system.trigger(f"HUD PANELS {status_str}", duration=1.5)
-                
-            # Toggle detections bounding boxes
-            elif key == ord(KEY_TOGGLE_BOX.lower()) or key == ord(KEY_TOGGLE_BOX.upper()):
-                show_boxes = not show_boxes
-                status_str = "VISIBLE" if show_boxes else "HIDDEN"
-                alert_system.trigger(f"DETECTIONS {status_str}", duration=1.5)
-
-            # Cycle color themes
-            elif key == ord(KEY_CYCLE_THEME.lower()) or key == ord(KEY_CYCLE_THEME.upper()):
-                theme_idx = (theme_idx + 1) % len(THEMES)
-                active_theme = THEMES[theme_idx]
-                alert_system.trigger(f"THEME: {active_theme['name']}", duration=2.0)
-                print(f"[HUD] Theme updated to: {active_theme['name']}")
-
-            # Check if OpenCV window was closed via close 'X' button
-            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
-                print("\nWindow closed manually. Closing...")
-                break
-
+    except WebSocketDisconnect:
+        # Client closed connection
+        pass
     except Exception as e:
-        print(f"\n[CRITICAL ERROR] Exception during runtime execution: {e}")
-    finally:
-        # Resource cleanup
-        cap.release()
-        detector.close()
-        cv2.destroyAllWindows()
-        print("Application terminated cleanly.")
-
-if __name__ == "__main__":
-    main()
+        print(f"[WEBSOCKET ERROR] Exception in WebSocket connection: {e}")
+        try:
+            await websocket.send_json({"success": False, "error": str(e)})
+        except:
+            pass
